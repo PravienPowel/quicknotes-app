@@ -5,15 +5,44 @@ const categorySelect = document.querySelector("#note-category");
 const list = document.querySelector("#notes-list");
 const count = document.querySelector("#note-count");
 const errorMessage = document.querySelector("#error-message");
+const searchInput = document.querySelector("#search-input");
 
-// ---------- 2. Our data: an array of note objects ----------
-let notes = [];
+// The name we use to save notes in localStorage
+const STORAGE_KEY = "quicknotes";
+
+// ---------- 2. Load saved notes (or start with an empty array) ----------
+let notes = loadNotes();
+
+function loadNotes() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved === null) {
+    return [];
+  }
+  return JSON.parse(saved);
+}
+
+function saveNotes() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+}
 
 // ---------- 3. Draw the notes on the page ----------
 function render() {
   list.innerHTML = ""; // clear the old list
 
-  notes.forEach((note) => {
+  // Work out which notes to show, based on the search box
+  const searchText = searchInput.value.trim().toLowerCase();
+  const visibleNotes = notes.filter((note) =>
+    note.text.toLowerCase().includes(searchText)
+  );
+
+  // If a search finds nothing, show a message in the list
+  if (visibleNotes.length === 0 && searchText !== "") {
+    const message = document.createElement("li");
+    message.textContent = "No notes match your search.";
+    list.appendChild(message);
+  }
+
+  visibleNotes.forEach((note) => {
     // The card
     const li = document.createElement("li");
     li.classList.add("note");
@@ -70,12 +99,14 @@ function addNote(text, category) {
     createdAt: new Date().toLocaleString(), // readable date and time
   };
   notes.push(newNote);
+  saveNotes(); // save after every change
   render();
 }
 
 function deleteNote(id) {
   // keep every note except the one with this id
   notes = notes.filter((note) => note.id !== id);
+  saveNotes(); // save after every change
   render();
 }
 
@@ -101,5 +132,8 @@ form.addEventListener("submit", (event) => {
   input.focus();
 });
 
-// ---------- 7. Draw once when the page loads ----------
+// ---------- 7. Search: redraw the list on every keystroke ----------
+searchInput.addEventListener("input", render);
+
+// ---------- 8. Draw once when the page loads ----------
 render();
